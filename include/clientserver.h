@@ -12,17 +12,12 @@
 #include <arpa/inet.h>
 #include "../include/packet.h"
 
-// Constants
-#define LOCALHOST   "127.0.0.1"
-
-// Methods
-
 struct in_addr* resolve_host(char  *hostname);
 
 
 /**
  * Kill the program
- * @param message   message to display in the console
+ * @param message   message to display
 */
 void die(char *message);
 
