@@ -48,6 +48,7 @@ int main(){
         // recepetion d'un nouveau paquet
         len  = recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr*) &client_addr, &flen);
             if(len < 0) die("Erreur lors de la réception");
+        printf("code packet : %d\n", packet_received.type);
         get++;
 
         switch (packet_received.type)
@@ -66,10 +67,12 @@ int main(){
                 break;
 
             case RESEND:
+            printf(GRE"Renvoi du paquet\n"RESET);
                 init_packet(&packet_send,BLOCK, buffer);
             break;
             
             case NEXT_BLOCK:
+                
 				if (read(audio_file, buffer, BUFF_SIZE) != 0){
                     longueur += strlen(buffer);
                     init_packet(&packet_send,BLOCK, buffer);
@@ -92,8 +95,13 @@ int main(){
                 get = 0;
                 break;
         }
-        if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
-            die("Erreur lors de l'envoie");
+        if(send != 54){
+            if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
+            die("Erreur lors de l'envoie\n");
+        } else{
+            printf(RED"paquet non envoyé\n"RESET);
+        }
+        
         send++;
     }
 
