@@ -64,6 +64,10 @@ int main(){
                     init_packet(&packet_send, HEADER, buffer);
                 }
                 break;
+
+            case RESEND:
+                init_packet(&packet_send,BLOCK, buffer);
+            break;
             
             case NEXT_BLOCK:
 				if (read(audio_file, buffer, BUFF_SIZE) != 0){
@@ -91,7 +95,6 @@ int main(){
         if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
             die("Erreur lors de l'envoie");
         send++;
-        //printf("%s",packet_send.data);
     }
 
     close(socketfd);

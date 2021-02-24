@@ -65,8 +65,6 @@ int main(int argc,char *argv[]){
             die("Erreur lors de la reception");
         get++;
 
-        printf("%s",packet_received.data);
-
         switch (packet_received.type)
         {
             case HEADER:
@@ -94,8 +92,10 @@ int main(int argc,char *argv[]){
                 packet_send.type = NEXT_BLOCK;
                 break;
             
+            case RESEND:
+            break
+            
             default: //EOF ou ERROR
-                //printf("%s\n",packet_received.data);
                 close(audio_output);
                 end = 1;
                 

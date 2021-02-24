@@ -3,7 +3,7 @@
 
 void init_packet(packet *packet, int type, char* data){
     packet->type = type;
-    strcpy(packet->data, data);
+    memcpy(packet->data, data, BUFF_SIZE);
 }
 
 void clear_packet(packet *packet){

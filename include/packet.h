@@ -7,7 +7,7 @@
 #define FILENAME    2
 #define BLOCK       3
 #define NEXT_BLOCK  4
-#define PREV_BLOCK  5
+#define RESEND      5
 #define END         6
 #define CLOSE_CNX   7
 #define ERROR       -1

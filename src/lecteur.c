@@ -59,4 +59,4 @@ int main(int argc,char *argv[]){
 
 // Question 3
 // sample_size = 8;
-// A NE PAS FAIRE LE SON ENCULE LES OREILLES !!!!
+// A NE PAS FAIRE LE SON DETRUIT LES OREILLES !!!!
