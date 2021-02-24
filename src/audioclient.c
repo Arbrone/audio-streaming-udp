@@ -55,7 +55,7 @@ int main(int argc,char *argv[]){
     // début échange
     while(!end){
 
-        // remise à neuf des paquet à envoyer
+        // remise à 0 des paquets à envoyer
         clear_packet(&packet_send);
         clear_packet(&packet_received);
 
@@ -65,7 +65,7 @@ int main(int argc,char *argv[]){
             die("Erreur lors de la reception");
         get++;
 
-        //printf("%s",packet_received.data);
+        printf("%s",packet_received.data);
 
         switch (packet_received.type)
         {
@@ -95,11 +95,11 @@ int main(int argc,char *argv[]){
                 break;
             
             default: //EOF ou ERROR
-                printf("%s\n",packet_received.data);
+                //printf("%s\n",packet_received.data);
                 close(audio_output);
                 end = 1;
                 
-                //envoie du dernier paquet
+                //envoi du dernier paquet
                 packet_send.type = CLOSE_CNX;
                 break;
         }
@@ -111,6 +111,8 @@ int main(int argc,char *argv[]){
 
 
     close(socketfd);
+
+    // verifications envoi correct
     printf("Paquet envoyés : %d\n",send);
     printf("Paquet reçus : %d\n",get);
     printf("Taille : %d\n",longueur);

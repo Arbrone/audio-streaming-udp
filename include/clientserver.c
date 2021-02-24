@@ -40,10 +40,6 @@ int init_client_socket (struct sockaddr_in *serv_addr,  uint16_t server_port, ch
     return socketfd;
 }
 
-int send_packet(packet *packet);
-
-int get_packet(packet *packet);
-
 void die(char *message){
     perror(message);
     exit(EXIT_FAILURE);

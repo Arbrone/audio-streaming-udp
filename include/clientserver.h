@@ -36,10 +36,6 @@ int init_server_socket (struct sockaddr_in *serv_addr, uint16_t server_port);
 
 int init_client_socket (struct sockaddr_in *serv_addr,  uint16_t server_port, char *hostname);
 
-int send_packet(packet *packet);
-
-int get_packet(packet *packet);
-
 void parseMetadata(char *buffer, int *sample_rate, int *sample_size, int *channels);
 
 #endif

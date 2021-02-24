@@ -39,7 +39,7 @@ int main(){
 
     
     /* #### DEBUT COMMUNICATION #### */
-    // le serveur ne s'arrête jamais
+    // le serveur ne s'arrête que sur erreur
     while(1){
         //  reset des paquet à envoyer
         clear_packet(&packet_send);
@@ -57,7 +57,7 @@ int main(){
                 audio_file = aud_readinit(packet_received.data, &sample_rate, &sample_size, &channels);
                 
                 if(audio_file < 0){ // si le serveur ne peut pas ouvrir le fichier demandé
-                    // envoie d'un message d'erreur
+                    // envoi d'un message d'erreur
                     init_packet(&packet_send, ERROR, "Impossible d'ouvrir le fichier demandé");
                 } else {
                     sprintf(buffer, "%d|%d|%d", sample_rate, sample_size, channels);
@@ -77,6 +77,8 @@ int main(){
 
             case CLOSE_CNX:
                 close(audio_file);
+
+                // verifications receptions
                 printf("Lecture terminée\n");
                 printf("Paquet envoyés : %d\n",send);
                 printf("Paquet reçus : %d\n",get);
@@ -96,42 +98,3 @@ int main(){
 
     return 0;
 }
-
-/* Ancienne version avec 2x plus de paquets envoyés que reçus
-switch (packet_received.type)
-        {
-            case FILENAME:
-                // recuperation metadata
-                audio_file = aud_readinit(packet_received.data, &sample_rate, &sample_size, &channels);
-                
-                if(audio_file < 0){ // si le serveur ne peut pas ouvrir le fichier demandé
-                    // envoie d'un message d'erreur
-                    init_packet(&packet_send, ERROR, "Impossible d'ouvrir le fichier demandé");
-                } else {
-                    sprintf(buffer, "%d|%d|%d", sample_rate, sample_size, channels);
-                    init_packet(&packet_send, HEADER, buffer);
-                }
-                break;
-            
-            case NEX_BLOCK:
-				if (read(audio_file, buffer, BUFF_SIZE) != 0){
-                    
-                    init_packet(&packet_send,BLOCK, buffer);
-
-                } else {
-                    init_packet(&packet_send,END,"Lecture terminée");
-                }
-            
-			    break;
-
-            case CLOSE_CNX:
-                close(audio_file);
-                printf("Lecture terminée\n");
-                printf("Paquet envoyés : %d\n",send);
-                printf("Paquet reçus : %d\n",get);
-                break;
-        }
-        if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
-            die("Erreur lors de l'envoie");
-        send++;
-*/
