@@ -25,7 +25,6 @@ int main(int argc,char *argv[]){
     struct sockaddr_in serv_addr;
     packet packet_send;
     packet packet_received;
-    socklen_t len;
     socklen_t flen = sizeof(struct sockaddr_in);
     int socketfd;
     
@@ -89,15 +88,15 @@ int main(int argc,char *argv[]){
             clear_packet(&packet_send);
             clear_packet(&packet_received);
             
-            if(get%34 != 1){
-                printf("get = %d\n", get);
-                // reception d'un nouveau paquet
-               if(recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr*) &serv_addr, &flen) < 0)
-                    die("Erreur lors de la reception");
+            // if(get%34 != 1){
+            //     printf("get = %d\n", get);
+            //     // reception d'un nouveau paquet
+                if(recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr*) &serv_addr, &flen) < 0)
+                     die("Erreur lors de la reception");
               
-            }else{
-                printf(RED"paquet non reçu\n"RESET);
-            }
+            // }else{
+            //     printf(RED"paquet non reçu\n"RESET);
+            // }
             get++;
 
             switch (packet_received.type)
@@ -139,6 +138,7 @@ int main(int argc,char *argv[]){
                 default: //EOF ou ERROR
                     //TODO comment for WSL test
                     close(audio_output);
+                    printf("%s\n",packet_received.data);
                     end = 1;
                     
                     //envoi du dernier paquet
