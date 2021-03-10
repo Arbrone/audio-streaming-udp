@@ -42,7 +42,6 @@ int main(){
     // le serveur ne s'arrête que sur erreur
     while(1){
         //  reset des paquet à envoyer
-        clear_packet(&packet_send);
         clear_packet(&packet_received);
 
         // recepetion d'un nouveau paquet
@@ -68,7 +67,8 @@ int main(){
 
             case RESEND:
             printf(GRE"Renvoi du paquet\n"RESET);
-                init_packet(&packet_send,BLOCK, buffer);
+                if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
+                    die("Erreur lors de l'envoie\n");
             break;
             
             case NEXT_BLOCK:
@@ -93,15 +93,15 @@ int main(){
 
                 send = 0;
                 get = 0;
+                longueur = 0;
                 break;
         }
-        if(send != 54){
+        if(send%43 != 1){
             if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
             die("Erreur lors de l'envoie\n");
         } else{
             printf(RED"paquet non envoyé\n"RESET);
-        }
-        
+        }        
         send++;
     }
 

@@ -89,11 +89,12 @@ int main(int argc,char *argv[]){
             clear_packet(&packet_send);
             clear_packet(&packet_received);
             
-            if(get != 90){
+            if(get%34 != 1){
                 printf("get = %d\n", get);
                 // reception d'un nouveau paquet
                if(recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr*) &serv_addr, &flen) < 0)
                     die("Erreur lors de la reception");
+              
             }else{
                 printf(RED"paquet non reçu\n"RESET);
             }
@@ -107,9 +108,9 @@ int main(int argc,char *argv[]){
 
                     // et initialisation du lecteur audio
                     //TODO comment for WSL test
-                    /*audio_output = aud_writeinit(sample_rate, sample_size, channels); 
+                    audio_output = aud_writeinit(sample_rate, sample_size, channels); 
                     if(audio_output < 0)
-                        die("Erreur lors de l'ouverture du device audio");*/
+                        die("Erreur lors de l'ouverture du device audio");
                     
                     printf("Lecture de %s en cours\n", argv[2]);
                     
@@ -120,8 +121,8 @@ int main(int argc,char *argv[]){
                 case BLOCK:
                     // lecture du paquet reçu
                     //TODO comment for WSL test
-                    /*if(write(audio_output, packet_received.data, BUFF_SIZE) <0 )
-                        die("erreur lors de l'écritue dans la sortie audio");*/
+                    if(write(audio_output, packet_received.data, BUFF_SIZE) <0 )
+                        die("erreur lors de l'écritue dans la sortie audio");
                     
                     longueur += strlen(packet_received.data);
                     // demande de la suite du morceau
@@ -137,7 +138,7 @@ int main(int argc,char *argv[]){
                 
                 default: //EOF ou ERROR
                     //TODO comment for WSL test
-                    //close(audio_output);
+                    close(audio_output);
                     end = 1;
                     
                     //envoi du dernier paquet
