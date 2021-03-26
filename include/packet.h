@@ -10,6 +10,7 @@
 #define RESEND      5
 #define END         6
 #define CLOSE_CNX   7
+#define PORT        8
 #define ERROR       -1
 
 #define BUFF_SIZE   1024

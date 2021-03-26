@@ -40,6 +40,19 @@ int init_client_socket (struct sockaddr_in *serv_addr,  uint16_t server_port, ch
     return socketfd;
 }
 
+int init_child_socket(struct sockaddr_in *serv_addr){
+    // on trouve le port à bind pour l'enfant 
+    int port = ntohs(serv_addr->sin_port);
+    int socket;
+    //Child socket
+    while ((socket = init_server_socket(serv_addr, port)) < 0)
+    {
+        port++;
+    }
+
+    return socket;
+}
+
 void die(char *message){
     perror(message);
     exit(EXIT_FAILURE);
@@ -65,4 +78,59 @@ void parseMetadata(char *buffer, int *sample_rate, int *sample_size, int *channe
         }
         i++;
     }
+}
+
+int new_client_process(int *nb_client, int max_client){
+    if(*nb_client < max_client){
+        nb_client++;
+        int pid = fork();
+        if(pid<0) {
+            die("Erreur création enfant");
+        }
+        return pid;
+    }
+
+    return -1;
+}
+
+packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rate, int *sample_size, int *channels, int *end){
+    packet packet_send;
+    char buffer[BUFF_SIZE];
+    switch (packet_received.type)
+    {
+        case FILENAME:
+            // recuperation metadata dans un packet
+            *audio_fd = aud_readinit(packet_received.data, sample_rate, sample_size, channels);
+
+            if (*audio_fd < 0)
+            { // si le serveur ne peut pas ouvrir le fichier demandé
+                // envoi d'un message d'erreur
+                init_packet(&packet_send, ERROR, "Impossible d'ouvrir le fichier demandé");
+            }
+            else
+            {
+                sprintf(buffer, "%d|%d|%d", *sample_rate, *sample_size, *channels);
+                init_packet(&packet_send, HEADER, buffer);
+            }
+            break;
+
+        case RESEND:
+            return packet_received;
+
+        case NEXT_BLOCK:
+            if (read(*audio_fd, buffer, BUFF_SIZE) != 0){
+                init_packet(&packet_send,BLOCK, buffer);
+            } else {
+                init_packet(&packet_send,END,"Lecture terminée");
+            }
+            break;
+
+        case CLOSE_CNX:
+            close(*audio_fd);
+            init_packet(&packet_send,EMPTY,"");
+            *end=1;
+            break;
+    } //switch
+
+    return packet_send;
 }

@@ -1,3 +1,9 @@
+/**
+ * Projet SYS, rendu du 26 mars
+ * Binome : Thomas VERRIER, Alex GILLES
+ * Groupe : 1.1 
+*/
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -17,7 +23,7 @@
 int main(int argc,char *argv[]){
     
     if(argc != 3) { 
-        die("Respecter le format : ./client server_host_name file_name");
+        die("Respecter le format : ./client [server_host_name]0 [file_name]");
     }
 
     /* #### VARIABLES ####*/
@@ -33,9 +39,6 @@ int main(int argc,char *argv[]){
     int sample_rate, sample_size, channels;
     int audio_output;
     int end = 0;
-    int get = 0;
-    int send = 0;
-    int longueur = 0;
 
     //Timeout
     int nb;
@@ -54,12 +57,11 @@ int main(int argc,char *argv[]){
     
     // le premier paquet contient uniquement le nom du fichier à lire
     init_packet(&packet_send, FILENAME, argv[2]);
-
     if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &serv_addr, flen) < 0)
+    {
         die("Erreur lors de l'envoie");
-    send++;
-
-    
+    }
+ 
     // début échange
     while(!end){
 
@@ -80,33 +82,27 @@ int main(int argc,char *argv[]){
             if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &serv_addr, flen) < 0)
                 die("Erreur lors de l'envoie");
             printf(GRE"Demande resend\n"RESET);
-            send++;
         }
 
         if(FD_ISSET(socketfd, &read_set)){
             // remise à 0 des paquets à envoyer
             clear_packet(&packet_send);
             clear_packet(&packet_received);
-            
-            // if(get%34 != 1){
-            //     printf("get = %d\n", get);
-            //     // reception d'un nouveau paquet
-                if(recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr*) &serv_addr, &flen) < 0)
-                     die("Erreur lors de la reception");
-              
-            // }else{
-            //     printf(RED"paquet non reçu\n"RESET);
-            // }
-            get++;
 
+            if(recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr*) &serv_addr, &flen) < 0)
+                die("Erreur lors de la reception");
+
+            // Traitement du paquet reçu 
             switch (packet_received.type)
             {
                 case HEADER:
+                    if(socketfd<0)
+                        die("erreur socket");
+
                     // récupération des metadata
                     parseMetadata(packet_received.data, &sample_rate, &sample_size, &channels);
 
                     // et initialisation du lecteur audio
-                    //TODO comment for WSL test
                     audio_output = aud_writeinit(sample_rate, sample_size, channels); 
                     if(audio_output < 0)
                         die("Erreur lors de l'ouverture du device audio");
@@ -116,49 +112,29 @@ int main(int argc,char *argv[]){
                     // demande de la suite du morceau
                     packet_send.type = NEXT_BLOCK;
                     break;
-                
+
                 case BLOCK:
                     // lecture du paquet reçu
-                    //TODO comment for WSL test
                     if(write(audio_output, packet_received.data, BUFF_SIZE) <0 )
                         die("erreur lors de l'écritue dans la sortie audio");
-                    
-                    longueur += strlen(packet_received.data);
+
                     // demande de la suite du morceau
                     packet_send.type = NEXT_BLOCK;
                     break;
                 
-                case EMPTY:
-                     init_packet(&packet_send,RESEND,"timeout");
-                        // on redemande le meme packet
-                        if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &serv_addr, flen) < 0)
-                            die("Erreur lors de l'envoie");
-                        break;
-                
                 default: //EOF ou ERROR
-                    //TODO comment for WSL test
                     close(audio_output);
-                    printf("%s\n",packet_received.data);
                     end = 1;
-                    
+                    printf("%s\n", packet_received.data);
                     //envoi du dernier paquet
                     packet_send.type = CLOSE_CNX;
                     break;
             }
-
             if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &serv_addr, flen) < 0)
                 die("Erreur lors de l'envoie");
-            send++;
         } // Fin si timeout ok
     } // fin while
 
-
     close(socketfd);
-
-    // verifications envoi correct
-    printf("Paquet envoyés : %d\n",send);
-    printf("Paquet reçus : %d\n",get);
-    printf("Taille : %d\n",longueur);
-
     return 0;
 }

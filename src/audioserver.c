@@ -1,126 +1,141 @@
+/**
+ * Projet SYS, rendu du 26 mars
+ * Binome : Thomas VERRIER, Alex GILLES
+ * Groupe : 1.1 
+*/
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include "../include/clientserver.h"
 #include "../include/packet.h"
 #include "../include/clientserver.h"
 #include "../include/lib/sysprog-audio-1.5/audio.h"
 
-#define RED   "\x1B[31m"
-#define GRE   "\x1b[32m"
+#define RED "\x1B[31m"
+#define BLUE "\x1b[34m"
+#define GRE "\x1b[32m"
 #define RESET "\x1B[0m"
+#define MAX_CLIENT 2
 
+int NB_CLIENT;
 
-int main(){
-    printf("# "GRE"Lancement du serveur\n"RESET"#\n");
+void sig_chld(int sig)
+{
+    pid_t pid;
+    int stat;
+    while ((pid = waitpid(-1, &stat, WNOHANG)) > 0)
+    {
+        NB_CLIENT--;
+        printf("Child %d terminated with status %d\n", pid, stat);
+    }
+}
+
+int main()
+{
+    printf("# " GRE "Lancement du serveur\n" RESET "#\n");
 
     /* ##### VARIABLES ##### */
     // Network
-    struct sockaddr_in serv_addr, client_addr, user;
-    packet packet_send;
-    packet packet_received;   
+    struct sockaddr_in serv_addr, client_addr;
+    packet packet_send, packet_received;
     socklen_t len;
     socklen_t flen = sizeof(struct sockaddr_in);
-    int socketfd;
-
-    int occupe=0;
-
-
-
+    int socketfd, child_socket;
 
     // Audio
     int sample_rate, sample_size, channels;
     int audio_file;
-    char buffer[BUFF_SIZE];
-    int send = 0;
-    int get = 0;
-    int longueur = 0;
-    
+
+    // MULTI CLIENT
+    NB_CLIENT = 0;
+    int pid = getpid();
+
+    // Handler sig_child
+    struct sigaction handler;
+    handler.sa_handler = sig_chld;
+    sigemptyset(&handler.sa_mask);
+    handler.sa_flags = 0;
+    sigaction(SIGCHLD, &handler, NULL);
+
     /* #### NETWORK INITIALISATION #### */
-    socketfd = init_server_socket(&serv_addr,1234);
-    if(socketfd<0)
+    socketfd = init_server_socket(&serv_addr, 1234);
+    if (socketfd < 0)
         die("erreur socket");
 
-    
     /* #### DEBUT COMMUNICATION #### */
     // le serveur ne s'arrête que sur erreur
-    while(1){
-        //  reset des paquet à envoyer
-        clear_packet(&packet_received);
-
-        // recepetion d'un nouveau paquet
-        len  = recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr*) &client_addr, &flen);
-            if(len < 0) die("Erreur lors de la réception");
-        printf("code packet : %d\n", packet_received.type);
-
-        if (occupe == 0){
-            user = client_addr;
-            occupe = 1;
-        }
-        if (client_addr.sin_port != user.sin_port){
-            init_packet(&packet_send, ERROR, "Serveur Occupé");
+    while (1)
+    {
+        // le serveur se met en attente d'un nouveau client
+        len = recvfrom(socketfd, &packet_received, sizeof(packet), 0, (struct sockaddr *)&client_addr, &flen);
+        if (len < 0)
+        {
+            die("Erreur lors de la réception");
         }
 
-        else{
-            switch (packet_received.type)
+        if (packet_received.type == FILENAME)
+        {
+            printf(BLUE"Connexion : @ %s Port : %d\n" RESET, inet_ntoa(client_addr.sin_addr), htons(serv_addr.sin_port));
+
+            // nombre de connexions max atteint
+            // lancemement d'un nouveau processus si le serveur n'est pas full
+            if ((pid = new_client_process(&NB_CLIENT, MAX_CLIENT)) < 0)
             {
-                case FILENAME:
-                    // recuperation metadata
-                    audio_file = aud_readinit(packet_received.data, &sample_rate, &sample_size, &channels);
-                    
-                    if(audio_file < 0){ // si le serveur ne peut pas ouvrir le fichier demandé
-                        // envoi d'un message d'erreur
-                        init_packet(&packet_send, ERROR, "Impossible d'ouvrir le fichier demandé");
-                    } else {
-                        sprintf(buffer, "%d|%d|%d", sample_rate, sample_size, channels);
-                        init_packet(&packet_send, HEADER, buffer);
+                init_packet(&packet_send, ERROR, "nb utilisateurs max atteint");
+                if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr *)&client_addr, flen) < 0)
+                    die(RED "Erreur lors de l'envoie\n" RESET);
+            }
+
+            // si nombre de clients ilimité
+            /*pid = fork();
+            if (pid < 0)
+            {
+                die("Erreur création enfant");
+            }*/
+
+            NB_CLIENT++;
+
+            // PROCESSUS ENFANT
+            if (pid == 0)
+            {
+                int child_end = 0;
+                child_socket = init_child_socket(&serv_addr);
+
+                printf(BLUE"Affectation : @ %s Port : %d\n"RESET, inet_ntoa(client_addr.sin_addr), htons(serv_addr.sin_port));
+                printf("processus enfant : %d\n", getpid());
+
+                /* #### DEBUT ECHANGE FICHIER #### */
+                while (!child_end)
+                {
+                    //traitement du paquet reçu
+                    packet_send = get_packet_to_send(packet_received, &audio_file, &sample_rate, &sample_size, &channels, &child_end);
+
+                    // verification pour bien traiter le cas CLOSE_CNX et ne pas rentrer dans un recvfrom d'un paquet qui n'arrivera pas
+                    // child_end sera mis à vrai par get_packet_to_send() en cas de CLOSE_CNX
+                    if (!child_end)
+                    {
+                        if (sendto(child_socket, &packet_send, sizeof(packet), 0, (struct sockaddr *)&client_addr, flen) < 0)
+                            die(BLUE "Erreur lors de l'envoie\n" RESET);
+
+                        len = recvfrom(child_socket, &packet_received, sizeof(packet), 0, (struct sockaddr *)&client_addr, &flen);
+                        if (len < 0)
+                            die("Erreur lors de la réception");
                     }
-                    break;
+                }
 
-                case RESEND:
-                printf(GRE"Renvoi du paquet\n"RESET);
-                    if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
-                        die("Erreur lors de l'envoie\n");
-                break;
-                
-                case NEXT_BLOCK:
-                    
-                    if (read(audio_file, buffer, BUFF_SIZE) != 0){
-                        longueur += strlen(buffer);
-                        init_packet(&packet_send,BLOCK, buffer);
-
-                    } else {
-                        init_packet(&packet_send,END,"Lecture terminée");
-                    }
-                    break;
-
-                case CLOSE_CNX:
-                    close(audio_file);
-
-                    // verifications receptions
-                    printf("Lecture terminée\n");
-                    printf("Paquet envoyés : %d\n",send);
-                    printf("Paquet reçus : %d\n",get);
-                    printf("Taille : %d\n",longueur);
-
-                    send = 0;
-                    get = 0;
-                    longueur = 0;
-                    occupe = 0;
-                    break;
-            }//switch
-        }//else
-        // if(send%43 != 1){
-            if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &client_addr, flen) < 0)
-                die("Erreur lors de l'envoie\n");
-        // } else{
-        //     printf(RED"paquet non envoyé\n"RESET);
-        // }        
-        send++;
-    }
-
+                close(child_socket);
+                return 0;
+            } //fin enfant
+        }
+        clear_packet(&packet_received);
+        //printf("nb client fin while %d\n", NB_CLIENT);
+    } //fin while
     close(socketfd);
 
     return 0;
-}
+} // fin main
+
+//? clear && echo -e '   PPID     PID    PGID     SID TTY        TPGID STAT   UID   TIME COMMAND' && ps -axjf | grep "./server"
