@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include "packet.h"
+#include "filters.h"
 #include "lib/sysprog-audio-1.5/audio.h"
 
 struct in_addr* resolve_host(char  *hostname);
@@ -65,6 +66,8 @@ int new_client_process(int *nb_client, int max_client);
  * @param end               un pointeur mis à 1 si CLOSE_CNX      
  * @return                  le packet de réponse
  */
-packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rate, int *sample_size, int *channels, int *end);
+packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rate, int *sample_size, int *channels, char *filename, int *filter, int *end);
 
+
+void parseFilenameFilter(char *data, char *filename, int *filter);
 #endif

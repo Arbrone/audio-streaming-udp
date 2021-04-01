@@ -47,6 +47,8 @@ int main()
 
     // Audio
     int sample_rate, sample_size, channels;
+    int filter;
+    char filename[64];
     int audio_file;
 
     // MULTI CLIENT
@@ -111,7 +113,7 @@ int main()
                 while (!child_end)
                 {
                     //traitement du paquet reçu
-                    packet_send = get_packet_to_send(packet_received, &audio_file, &sample_rate, &sample_size, &channels, &child_end);
+                    packet_send = get_packet_to_send(packet_received, &audio_file, &sample_rate, &sample_size, &channels, filename, &filter, &child_end);
 
                     // verification pour bien traiter le cas CLOSE_CNX et ne pas rentrer dans un recvfrom d'un paquet qui n'arrivera pas
                     // child_end sera mis à vrai par get_packet_to_send() en cas de CLOSE_CNX

@@ -93,14 +93,16 @@ int new_client_process(int *nb_client, int max_client){
     return -1;
 }
 
-packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rate, int *sample_size, int *channels, int *end){
+packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rate, int *sample_size, int *channels, char *filename, int *filter, int *end){
     packet packet_send;
     char buffer[BUFF_SIZE];
     switch (packet_received.type)
     {
         case FILENAME:
+
+            parseFilenameFilter(packet_received.data, filename, filter);
             // recuperation metadata dans un packet
-            *audio_fd = aud_readinit(packet_received.data, sample_rate, sample_size, channels);
+            *audio_fd = aud_readinit(filename, sample_rate, sample_size, channels);
 
             if (*audio_fd < 0)
             { // si le serveur ne peut pas ouvrir le fichier demandé
@@ -109,8 +111,14 @@ packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rat
             }
             else
             {
-                sprintf(buffer, "%d|%d|%d", *sample_rate, *sample_size, *channels);
+                if(*filter == SLOW){
+                sprintf(buffer, "%d|%d|%d", *sample_rate/2, *sample_size, *channels);
+                }
+                else{
+                    sprintf(buffer, "%d|%d|%d", *sample_rate, *sample_size, *channels);
+                }
                 init_packet(&packet_send, HEADER, buffer);
+                
             }
             break;
 
@@ -133,4 +141,22 @@ packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rat
     } //switch
 
     return packet_send;
+}
+
+void parseFilenameFilter(char *data, char *filename, int *filter){
+    int i = 0;
+    char* a;
+    for (a = strtok(data, "|"); a != NULL; a = strtok(NULL, "|")) {
+        switch (i)
+        {
+        case 0: //correspond au rate
+            strcpy(filename,a);
+            break;
+        
+        case 1:
+            *filter = atoi(a);
+            break;
+        }
+        i++;
+    }
 }

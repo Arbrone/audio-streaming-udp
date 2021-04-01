@@ -22,9 +22,9 @@
 
 int main(int argc,char *argv[]){
     
-    if(argc != 3) { 
-        die("Respecter le format : ./client [server_host_name]0 [file_name]");
-    }
+    // if(argc != 3) { 
+    //     die("Respecter le format : ./client [server_host_name]0 [file_name]");
+    // }
 
     /* #### VARIABLES ####*/
     // Network
@@ -55,8 +55,9 @@ int main(int argc,char *argv[]){
     /* #### DEBUT COMMUNICATION #### */
     printf("# "GRE"Connexion au serveur\n"RESET"#\n");
     
-    // le premier paquet contient uniquement le nom du fichier à lire
+    // le premier paquet contient uniquement le nom du fichier à lire    
     init_packet(&packet_send, FILENAME, argv[2]);
+    sprintf(packet_send.data, "%s|%s", argv[2], argv[3]);
     if (sendto(socketfd, &packet_send, sizeof(packet), 0, (struct sockaddr*) &serv_addr, flen) < 0)
     {
         die("Erreur lors de l'envoie");
