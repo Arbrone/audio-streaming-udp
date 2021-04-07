@@ -129,7 +129,6 @@ packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rat
             if (read(*audio_fd, buffer, BUFF_SIZE) != 0){
 
                 apply_filter(buffer, *filter, *sample_size);
-                printf("gnegne");
                 init_packet(&packet_send,BLOCK, buffer);
                 
             } else {
@@ -171,6 +170,12 @@ void apply_filter(char *buffer, int filter, int sample_size){
     printf("apply_filter %d %d \n", filter, sample_size);
     int8_t *ptr8 = (int8_t *)buffer;
     int16_t *ptr16 = (int16_t *)buffer;
+    
+    char new_buffer[BUFF_SIZE];
+    int8_t *ptr8_buff = (int8_t *)new_buffer;
+    int16_t *ptr16_buff = (int16_t *)new_buffer;
+
+    int j=0;
 
     switch(filter){
         case VOLUME:
@@ -186,6 +191,32 @@ void apply_filter(char *buffer, int filter, int sample_size){
                     ptr16++;
                 }
             }
+            break;
+        
+        case MONO:
+            if(sample_size == 8){
+                for(int i=0; i<BUFF_SIZE; i+= sizeof(int8_t)){
+                    if(j%2 == 0){
+                        *ptr8_buff = *ptr8;
+                        ptr8_buff++;
+                        
+                    }
+                    ptr8++;
+                    j++;
+                }
+            }
+            else{
+                for(int i=0; i<BUFF_SIZE; i+= sizeof(int16_t)){
+                    if(j%2 == 0){
+                        *ptr16_buff = *ptr16;
+                        ptr16_buff++;
+                        
+                    }
+                    ptr16++;
+                    j++;
+                }
+            }
+            *buffer=*new_buffer;
             break;
     }
 }
