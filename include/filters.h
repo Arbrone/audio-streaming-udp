@@ -3,5 +3,6 @@
 
 #define NONE 0
 #define SLOW 1
+#define VOLUME 2
 
 #endif

@@ -70,4 +70,6 @@ packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rat
 
 
 void parseFilenameFilter(char *data, char *filename, int *filter);
+
+void apply_filter(char *data, int filter, int sample_size);
 #endif

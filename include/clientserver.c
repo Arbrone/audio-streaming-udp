@@ -127,7 +127,11 @@ packet get_packet_to_send(packet packet_received, int *audio_fd, int *sample_rat
 
         case NEXT_BLOCK:
             if (read(*audio_fd, buffer, BUFF_SIZE) != 0){
+
+                apply_filter(buffer, *filter, *sample_size);
+                printf("gnegne");
                 init_packet(&packet_send,BLOCK, buffer);
+                
             } else {
                 init_packet(&packet_send,END,"Lecture terminée");
             }
@@ -158,5 +162,30 @@ void parseFilenameFilter(char *data, char *filename, int *filter){
             break;
         }
         i++;
+    }
+}
+
+void apply_filter(char *buffer, int filter, int sample_size){
+
+
+    printf("apply_filter %d %d \n", filter, sample_size);
+    int8_t *ptr8 = (int8_t *)buffer;
+    int16_t *ptr16 = (int16_t *)buffer;
+
+    switch(filter){
+        case VOLUME:
+            if(sample_size == 8){
+                for(int i=0; i<BUFF_SIZE; i+= sizeof(int8_t)){
+                    *ptr8=(*ptr8)*2;
+                    ptr8++;
+                }
+            }
+            else{
+                for(int i=0; i<BUFF_SIZE; i+= sizeof(int16_t)){
+                    *ptr16=(*ptr16)*2;
+                    ptr16++;
+                }
+            }
+            break;
     }
 }
